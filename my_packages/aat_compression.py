@@ -10,14 +10,45 @@ import zlib    # zlib library, which is based on GNU zip 一个压缩模块
 import pickle
 from enum import Enum
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.NOTSET)
 logger = logging.getLogger("AAT-Compression")
+
+# logger.setLevel(0)
+
+# ==================================================================
+
+# 使用 Google 搜索 python logging 即可找到官方文档，有一个非常清晰的示例和详细的设计说明
+
+# logger = logging.getLogger(__name__)  # 1) 创建 logger 对象
+
+# def main():  
+#     2) logger 的基本参数配置，如写入的文件名、详细等级（官方文档查）
+#     logging.basicConfig(filename='myapp.log', level=logging.INFO)
+
+#     logger.info('Started')   3) logger 的 info 打印函数
+#     mylib.do_something()
+#     logger.info('Finished')
+
+# logger = logging.getLogger(__name__)
+
+# def do_something():
+#     logger.info('Doing something')
+
+# INFO: __main__: Started
+# INFO: mylib: Doing something
+# INFO: __main__: Finished
+
+
+# =================================================================
+
 
 
 class CompressionAlgorithm(Enum):
     GZIP = "gzip"
     ZLIB = "zlib"
     NONE = "none"
+
+
 
 
 class CompressionManager:
