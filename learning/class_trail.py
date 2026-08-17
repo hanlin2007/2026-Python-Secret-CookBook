@@ -4,6 +4,7 @@ class Animal:
 
 
 class Dog(Animal):
+    # 例子：重写父类中的方法，并且还使用了 super() 调用父类方法
     def speak(self):
         print("dog setup", self)
         super().speak()
