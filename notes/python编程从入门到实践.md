@@ -271,6 +271,223 @@ for row in mat:
 
 
 
+### 第八章 函数
+
+```python
+# 将函数存储在模块中，包=文件夹，模块=文件
+# 可以导入 模块 / 包.模块 / 从模块导入类、函数
+
+# 导入包，文件在同级目录下
+import my_test_module
+my_test_module.make_pizza(16,"cheese","eggs")   # 引用时要加点，看 import 的终点
+
+# 导入包，包在文件夹中。目录结构如下：
+ my_script.py
+ my_package/
+     my_module.py
+     __init__.py
+        
+import my_package.my_module
+my_module.my_function()
+
+# 或者更好： 
+from my_package import my_module 
+from my_package.my_module import my_function
+
+# import 的本质是"把某个名字绑定到当前作用域"，右边可以是包、模块、类、函数、变量等**各种 python 对象**，在 import 行为上没有区别，只要自己知道导入的实际是什么
+
+# 只导入函数
+from my_test_module import make_pizza
+make_pizza(16,"cheese","eggs")
+
+# 导入所有函数
+from module import *
+
+# 给包 / 函数使用别名
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataSet, DataLoader
+```
+
+
+
+----
+
+### 第九章 面向对象编程：类
+
+- 类的基本定义：
+
+```py
+class Dog:
+    
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+    def sit(self):
+        print(f"{self.name} is sitting.")
+        
+my_dog = Dog("Lucky",1)    # 基于 类 创建 对象
+a = my_dog.name            # 访问对象的属性
+my_dog.sit()			   # 访问对象的方法 （类中的函数称为方法） 
+```
+
+- `__init__` 方法：
+  - `__name__` 、`__str__` 等双下划线包裹（Double UNDERscore / 魔术方法）是 python 语言层面保留的特殊命名空间，会主动查找并进行调用
+- `_log` 单下划线方法：
+  - 这是内部 API，我不保证稳定，你别当公开接口用 / 别在模块外面随便直接调（`from xxx import *` 时，带单下划线的不会被导入） 
+  - 开发文档框架 / 库作者本质希望**用户自己写 Handler / Filter**，继承 `Logger` 想改底层行为，你可以 `def _log(...)` 覆盖它
+
+- 双下划线 `__name`（类属性/方法名前，名字改写）：
+
+  - 在类里面定义的 `def __helper(self):` 方法 或  `self.__level` 属性
+
+  - 框架要被继承扩展，就用 `_`；工具类怕被误覆盖，才用 `__`。
+
+```py
+class Parent:
+    def __init__(self):
+        self.__x = 1      # 实际存为 _Parent__x
+
+class Child(Parent):
+    def __init__(self):
+        super().__init__()
+        self.__x = 2      # 实际存为 _Child__x，互不干扰！
+# 两个 __x 完全不是同一个属性，子类写啥都不会覆盖父类私有状态
+```
+
+- 所以 logging 用 `self._lock`（单下划线），约定"你继承时知道自己在干嘛就可以碰"。
+
+​       反观 `Enum`、`Exception` 基类内部用 `__` 多，因为**用户不该去动它内部实现**。
+
+- 关于 `self` 参数的理解：
+
+```py
+self 的本质，就是创建的对象 object 实体 
+# <__main__.my_dog object at 0x7f...> 
+
+my_dog.sit()          # 其实是一个语法糖!和下面的写法完全等价
+Dog.sit(my_dog)  	  
+
+# python 的绑定传参，当调用到成员方法的语法糖的时候，自动把 object 本体作为第一个参数传到函数里面去。而对于成员属性，则参考如下理解
+```
+
+- 对于成员属性的进阶理解：
+
+```py
+class Car:
+    
+    def __init__(self, name, type, year):
+        self.name = name
+        self.type = type   # 这才理解了参数含义：前面是属性，后面是传入的形 / 实参!! 
+        self.year = 0      # 前面是属性，后面不是用传参的方式，而是用一个字面量（默认值）
+        
+my_car = Car("Audi", C2, 2026)
+my_car.year = 2027         # 修改成员属性的值
+```
+
+-----
+
+- 字符串相关的魔术方法补充：
+
+- 1. `__str__` vs `__repr__`  （最重要，最常见）快速总结：
+
+- `str(obj)` / `print(obj)` → 调 **`__str__`**（给人看的，好看）
+- `repr(obj)` / 交互环境直接敲变量 → 调 **`__repr__`**（给开发者看的，尽量无歧义、能 eval 重建最好）
+- **如果没定义 `__str__`，Python 会 fallback 到 `__repr__`**
+- **容器（list / dict）打印元素时，永远会用 `repr`**
+
+```python
+class User:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+
+    def __repr__(self):
+        # 官方推荐格式：类名(参数) ，看起来像构造代码
+        return f"User(name={self.name!r}, age={self.age})"
+
+    def __str__(self):
+        # 给人看的
+        return f"{self.name}({self.age}岁)"
+
+u = User("Alice", 18)
+
+# 在用户交互场景下需要使用对象：
+print(u)          # Alice(18岁)        → __str__
+print(str(u))     # Alice(18岁)
+
+# 在调试场景下给自己看的：
+print(repr(u))    # User(name='Alice', age=18)  → __repr__
+u                 # 交互式 REPL 里直接输 → __repr__
+```
+
+- `__format__`（f-string / format 的根本底层方法）
+
+- 调用 `f"{obj:>10}"` 或 `"{}".format(obj)` 语句的时候，本质走的是 这个`__format__`魔术方法
+
+```python
+class Money:
+    def __init__(self, amount):
+        self.amount = amount
+
+    def __format__(self, spec):
+        # spec 就是冒号后面的部分，比如 "10.2f" 或 "cn"
+        if spec == "cn":
+            return f"人民币{self.amount:.2f}元"
+        if spec == "us":
+            return f"USD {self.amount:.2f}"
+        # 默认交给 float 去处理格式
+        return format(self.amount, spec)
+
+m = Money(123.4)
+print(f"{m}")          # ¥123.40       （str）
+print(f"{m:cn}")       # 人民币123.40元 （自定义 spec）
+print(f"{m:>10.1f}")   #       123.4   （交给 float 处理）
+```
+
+logging 里你如果自定义 `Formatter` 或者给 record 加 `extra`，对象支持 `__format__` 后，在 `formatter.format(record)` 里就很丝滑
+
+----
+
+- 类的继承：
+- `__init__()` 方法：成员属性的继承
+
+```python
+class Car:
+    def __init__(self, name, type, year):
+        self.name = name
+        self.type = type
+        self.year = year
+
+# 继承的__init__方法参数必须全部保留，哪怕有不需要的成员属性
+class ElectricCar(Car):
+    def __init__(self, name, year, battery_size):
+        super().__init__(name, type=None, year=year)
+        del self.type                		 # 强行不要这个属性
+        self.battery_size = battery_size     # 再添加新的属性  
+```
+
+- `super().__init__()` 方法的理解
+
+```py
+my_e_car = ElectricCar("小米SU7", 2024, 100)  # 基于类创建实例对象
+
+# 在走 super().__init__(...) 方法的时候，相当于使用了一个继承类 Car 的语法糖
+Car.__init__(self, ...)
+```
+
+- 回到对于 `self` 对象实体的理解：这里的实体就是 E-C  `__init__` 的 `self` 实体对象
+
+  参考下面这段示例代码的运行
+
+  从父类继承了 speak 方法，`super()` 就是隐式把语法糖转换为了 `Animal.speak(self)` 
+
+![image-20260817124544496](./../assets/image-20260817124544496.png) 
+
+----
+
 ### 第十章 文件和异常
 
 
@@ -343,7 +560,7 @@ my_dict = json.loads(my_path.read_text())  -> dict
 - 从单个 \* 开始，后面的参数只能关键字传参，避免函数功能更新的位置记忆
 - 最下面：一句话函数功能说明
 
-![image-20260815120235291](./assets/image-20260815120235291.png)
+![image-20260815120235291](../assets/image-20260815120235291.png)
 
 ```py
 sha256(b"abc", False)           # ❌ 报错！* 后面禁止位置传参
@@ -371,11 +588,45 @@ foo(1, 2, 3, name="x", age=18)
 
 
 
+如何理解 `encoding: Bool | None = False` 这种写法？
+
+其实是前面提到的函数参数注解几种写法的重叠：
+
+- `: str | None` 作为一个整体表示类型注解，表示类型既可为 str 也可为空
+
+- 看到这样的类型注解，解释器就会检查代码：
+  ```python
+  if encoding = None:       # 这样的处理必须先写，否则会报错
+      pass             				
+  else: ...
+  ```
+
+- 默认值还是默认值，只不过这里拿到的默认是 `False` 即可以默认不传这个参数，隐式关闭一个功能，而不是常见的默认 `None` , 也可以传参 `encoding = False` / `encoding = True` 显式来传参开启或者关闭
+
 ![image-20260815121211145](../assets/image-20260815121211145.png)
 
 
 
+一些 PEP8 的代码风格规范：
 
+- 函数参数默认值，如果不写类型注释的时候，`secure_check=false` 两边不加空格
+- 如果加了类型注释，`encoding: string = "utf-8"`
+
+**方式 A：隐式续行，与左括号垂直对齐**
+
+```python
+def long_function_name(var_one, var_two, var_three,
+                       var_four):
+    print(var_one)
+```
+
+**方式 B：悬挂缩进（首行不写参数，续行多缩进一级）**
+
+```python
+def long_function_name(
+        var_one, var_two, var_three, var_four):
+    print(var_one)
+```
 
 -----
 
