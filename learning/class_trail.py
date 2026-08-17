@@ -10,3 +10,5 @@ class Dog(Animal):
 
 dog = Dog()
 dog.speak()
+
+# 是同一个 self 实体！！super.() 的语法糖
