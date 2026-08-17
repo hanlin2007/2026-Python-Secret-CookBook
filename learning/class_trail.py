@@ -8,6 +8,7 @@ class Dog(Animal):
         print("dog setup", self)
         super().speak()
 
+
 dog = Dog()
 dog.speak()
 
